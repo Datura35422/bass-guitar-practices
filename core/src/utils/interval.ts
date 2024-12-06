@@ -1,15 +1,16 @@
-import { LevelType } from "../common/constants";
-import { getRandomIndex, shuffleArray } from "../utils/random";
+import { LevelType } from "../constants/index";
+import { getRandomIndex, shuffleArray } from "./random";
 import {
   TONE_OPTIONS,
   FOUR_TONE_OPTIONS,
   FIVE_TONE_OPTIONS,
-  INTERVEL_LIST,
+  INTERVAL_LIST,
   NOTE_LIST,
 } from "../constants/interval";
 
-// 特殊处理四度音和五度音
+/** 获取答案 */
 export function getAnswer(intervalNoteList: string[], interval: number) {
+  // 特殊处理四度音和五度音
   const intervalNoteLen = intervalNoteList.length;
   let answer = TONE_OPTIONS.find(({ value }) => value === interval);
   if (intervalNoteLen === 4) {
@@ -26,7 +27,8 @@ export function getAnswer(intervalNoteList: string[], interval: number) {
   return answer;
 }
 
-export function getOptions(answer?: { label: string; value: number }) {
+/** 获取答案选项 */
+export function getAnswerOptions(answer?: { label: string; value: number }) {
   if (answer) {
     const optionsList = [
       ...TONE_OPTIONS,
@@ -52,7 +54,8 @@ export function getOptions(answer?: { label: string; value: number }) {
   return [];
 }
 
-export function createQuestion(level = LevelType.junior) {
+/** 创建音程问题 */
+export function createIntervalQuestion(level = LevelType.junior) {
   const noteLen = NOTE_LIST.length;
   // 初级
   if (level === LevelType.junior) {
@@ -63,7 +66,7 @@ export function createQuestion(level = LevelType.junior) {
     let intervalNoteList = [firstNote];
     let intervalList = [0];
     while (firstNoteIndex !== secondNoteIndex) {
-      intervalList.push(INTERVEL_LIST[firstNoteIndex]);
+      intervalList.push(INTERVAL_LIST[firstNoteIndex]);
       // 如果到最后一个了，则重头开始
       if (firstNoteIndex === noteLen - 1) {
         firstNoteIndex = 0;
@@ -85,7 +88,7 @@ export function createQuestion(level = LevelType.junior) {
       secondNote,
       answer,
       intervalNoteList,
-      options: shuffleArray(getOptions(answer)),
+      options: shuffleArray(getAnswerOptions(answer)),
     };
   }
 }
