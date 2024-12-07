@@ -1,4 +1,3 @@
-import { LevelType } from "../constants/index";
 import { getRandomIndex, shuffleArray } from "./random";
 import {
   TONE_OPTIONS,
@@ -6,7 +5,31 @@ import {
   FIVE_TONE_OPTIONS,
   INTERVAL_LIST,
   NOTE_LIST,
+  OperateSemitone,
+  SEMITONE_SYMBOL,
 } from "../constants/interval";
+
+/** 获取完整的音列表，传入的降音或升音处理则每个音之间间隔半音 */
+export function getAllNote(semitone?: OperateSemitone) {
+  if (semitone === OperateSemitone.flat) {
+    return NOTE_LIST.flatMap((item) => {
+      //  特殊处理 C F，降C就是B，降F就是E
+      if (['c', 'F'].includes(item)) {
+        return [item];
+      }
+      return [`${item}${SEMITONE_SYMBOL[semitone]}`,item];
+    });
+  } else if (semitone === OperateSemitone.sharp) {
+    return NOTE_LIST.flatMap((item) => {
+      // 特殊处理 B E，升B就是C，升E就是F
+      if (['B', 'F'].includes(item)) {
+        return [item];
+      }
+      return [`${item}${SEMITONE_SYMBOL[semitone]}`,item];
+    });
+  }
+  return NOTE_LIST;
+};
 
 /** 获取答案 */
 export function getAnswer(intervalNoteList: string[], interval: number) {
@@ -54,41 +77,66 @@ export function getAnswerOptions(answer?: { label: string; value: number }) {
   return [];
 }
 
-/** 创建音程问题 */
-export function createIntervalQuestion(level = LevelType.junior) {
-  const noteLen = NOTE_LIST.length;
-  // 初级
-  if (level === LevelType.junior) {
-    let firstNoteIndex = getRandomIndex(noteLen);
-    const firstNote = NOTE_LIST[firstNoteIndex];
-    let secondNoteIndex = getRandomIndex(noteLen);
-    const secondNote = NOTE_LIST[secondNoteIndex];
-    let intervalNoteList = [firstNote];
-    let intervalList = [0];
-    while (firstNoteIndex !== secondNoteIndex) {
-      intervalList.push(INTERVAL_LIST[firstNoteIndex]);
-      // 如果到最后一个了，则重头开始
-      if (firstNoteIndex === noteLen - 1) {
-        firstNoteIndex = 0;
-      } else {
-        firstNoteIndex++;
-      }
-      intervalNoteList.push(NOTE_LIST[firstNoteIndex]);
+/** 创建音程问题 - 几度音 */
+export function createIntervalToneQuestion(noteList = NOTE_LIST) {
+  const noteLen = noteList.length;
+  let firstNoteIndex = getRandomIndex(noteLen);
+  const firstNote = noteList[firstNoteIndex];
+  let secondNoteIndex = getRandomIndex(noteLen);
+  const secondNote = noteList[secondNoteIndex];
+  let intervalNoteList = [firstNote];
+  let intervalList = [0];
+  while (firstNoteIndex !== secondNoteIndex) {
+    intervalList.push(INTERVAL_LIST[firstNoteIndex]);
+    // 如果到最后一个了，则重头开始
+    if (firstNoteIndex === noteLen - 1) {
+      firstNoteIndex = 0;
+    } else {
+      firstNoteIndex++;
     }
-
-    const interval = intervalList.reduce((res, cur) => {
-      res += cur;
-      return res;
-    }, 0);
-
-    const answer = getAnswer(intervalNoteList, interval);
-
-    return {
-      firstNote,
-      secondNote,
-      answer,
-      intervalNoteList,
-      options: shuffleArray(getAnswerOptions(answer)),
-    };
+    intervalNoteList.push(noteList[firstNoteIndex]);
   }
+
+  const interval = intervalList.reduce((res, cur) => {
+    res += cur;
+    return res;
+  }, 0);
+
+  const answer = getAnswer(intervalNoteList, interval);
+
+  // secondNote 是 firstNote 的几度音
+  return {
+    question: `${secondNote} 是 ${firstNote} 的几度音？`,
+    answer,
+    options: shuffleArray(getAnswerOptions(answer)),
+  };
 }
+
+/** 创建音程问题 - 计算音程得到音 */
+export function createDegreeNoteQuestion(intervel: number) {
+  const noteLen = NOTE_LIST.length;
+  let questionNoteIndex = getRandomIndex(noteLen);
+  const questionNote = NOTE_LIST[questionNoteIndex];
+  // 先统一用降半调的方式处理，获取所有音和半音列表，每个音之间的间隔为半音
+  const allNoteList = getAllNote(OperateSemitone.flat);
+  const currentQuestionNoteIndex = allNoteList.findIndex((item) => item === questionNote);
+  // 音数处理成半音的距离
+  const gap = Math.floor(intervel / 0.5);
+  const answerIndex = currentQuestionNoteIndex + gap;
+  const answerNote = [...allNoteList, ...allNoteList][answerIndex];
+
+  const intervalText = TONE_OPTIONS.find(({value}) => value === intervel)?.label;
+  const answerOptions = [...allNoteList, ...allNoteList].slice(answerIndex - 1, answerIndex + 2).map((item) => {
+    return {
+      label: item,
+      value: item,
+    };
+  });
+
+  return {
+    answer: {label: answerNote, value: answerNote},
+    question: `${questionNote} 的${intervalText}是`,
+    options: shuffleArray(answerOptions),
+  };
+};
+
